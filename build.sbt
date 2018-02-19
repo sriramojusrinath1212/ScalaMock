@@ -170,8 +170,22 @@ releaseProcess := {
   )
 }
 
-
-version in ThisBuild := {
+credentials ++= ( 
+  for {
+    u <- Option(System.getenv().get("SONATYPE_USERNAME"))    p <- Option(System.getenv().get("SONATYPE_PASSWORD")) 
+  }
+  yield Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", u, p)).toSeq
+{
+  val f = Path.userHome / ".sbt" / ".gpgsettings"  if (f.exists) 
+  {
+    println(s"pgp settings loaded from $f")val pphrase :: hexkey :: _ = IO.readLines(f)    
+    usePgpKeyHex(hexkey)Seq(pgpPassphrase := Some(pphrase.toCharArray),useGpg := true)
+  } 
+  else 
+  {    println(s"$f does not exist - pgp settings empty")    Seq.empty[Def.Setting[_]]
+  }
+}
+  version in ThisBuild := {
   val Snapshot = """(\d+)\.(\d+)\.(\d+)-\d+.*?""".r
   git.gitDescribedVersion.value.getOrElse("0.0.0-1")match {
     case Snapshot(maj, min, pat) => s"$maj.${min.toInt + 1}.$pat-SNAPSHOT"
